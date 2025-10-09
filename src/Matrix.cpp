@@ -3,10 +3,7 @@
 
 Matrix Matrix::Identity(std::size_t n) 
 {
-    // Creem una matriu quadrada n×n inicialitzada a zero.
     Matrix I(n, n);
-
-    // Recorrem la diagonal principal i hi col·loquem uns.
     for (std::size_t i = 0; i < n; ++i) {
         I.At(i, i) = 1;
     }
@@ -15,12 +12,12 @@ Matrix Matrix::Identity(std::size_t n)
 
 double& Matrix::At(std::size_t i, std::size_t j) 
 {
-    // En disposició row-major, l'índex pla és i*cols + j.
+    if (i >= rows || j >= cols) throw std::out_of_range("Matrix::At (non-const): índex fora de rang");
     return a[i * cols + j];
 }
 double Matrix::At(std::size_t i, std::size_t j) const 
 {
-    // En disposició row-major, l'índex pla és i*cols + j.
+    if (i >= rows || j >= cols) throw std::out_of_range("Matrix::At (const): índex fora de rang");
     return a[i * cols + j];
 }
 
@@ -30,23 +27,17 @@ Vec Matrix::Multiply(const Vec& x, OpsCounter* op) const
         throw std::invalid_argument("Matrix::Multiply(mat-vec): dimensions incompatibles");
     }
 
-    // Resultat inicialitzat a zero amb una entrada per fila.
-    Vec y(rows, 0.0);
+    Vec y(rows);
     if (rows == 0 || cols == 0) {
         return y;
     }
 
-    // Per cada fila calculem el producte escalar amb el vector.
     for (std::size_t i = 0; i < rows; ++i) {
         const std::size_t row_offset = i * cols;
-
-        // Primer terme (fora del bucle intern) per evitar una suma innecessària.
+        // Primer terme (si existeix) per evitar una addició innecessària
         double acc = a[row_offset] * x[0];
-        if (op) {
-            op->IncMul();
-        }
+        if (op) op->IncMul();
 
-        // Afegim els termes restants acumulant multiplicacions i sumes.
         for (std::size_t j = 1; j < cols; ++j) {
             acc += a[row_offset + j] * x[j];
             if (op) {
@@ -54,7 +45,6 @@ Vec Matrix::Multiply(const Vec& x, OpsCounter* op) const
                 op->IncAdd();
             }
         }
-
         y[i] = acc;
     }
 
@@ -67,23 +57,19 @@ Matrix Matrix::Multiply(const Matrix& B, OpsCounter* op) const
         throw std::invalid_argument("Matrix::Multiply(mat-mat): dimensions incompatibles");
     }
 
-    // Matriu resultat inicialitzada a zero de mida (files A) × (columnes B).
-    Matrix C(rows, B.cols, 0.0);
+    Matrix C(rows, B.cols);
     if (rows == 0 || cols == 0 || B.cols == 0) {
         return C;
     }
 
-    // Recorrem cada combinació fila A / columna B.
+    // Simple triple bucle, amb comptatge d'operacions
     for (std::size_t i = 0; i < rows; ++i) {
         const std::size_t a_row_offset = i * cols;
         for (std::size_t k = 0; k < B.cols; ++k) {
-            // Primer producte fora del bucle per reduir sumes.
-            double acc = a[a_row_offset] * B.At(0, k);
-            if (op) {
-                op->IncMul();
-            }
+            // Primer producte fora del bucle per evitar suma innecessària
+            double acc = a[a_row_offset + 0] * B.At(0, k);
+            if (op) op->IncMul();
 
-            // Resta d'entrades: acumulació de multiplicacions i sumes.
             for (std::size_t j = 1; j < cols; ++j) {
                 acc += a[a_row_offset + j] * B.At(j, k);
                 if (op) {
@@ -91,7 +77,6 @@ Matrix Matrix::Multiply(const Matrix& B, OpsCounter* op) const
                     op->IncAdd();
                 }
             }
-
             C.At(i, k) = acc;
         }
     }
