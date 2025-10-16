@@ -18,13 +18,9 @@ namespace LinAlg
             return true;
         }
 
-        double* data = A.a.data();
-        std::size_t ld = A.cols;
-
         // Recorrem cada columna pivot k i anul·lem els elements per sota.
         for (std::size_t k = 0; k < n; ++k) {
-            double* row_k = data + k * ld;
-            double pivot = row_k[k];
+            double pivot = A.At(k, k);
 
             // Comprovem la magnitud del pivot respecte la tolerància.
             if (op) op->IncCmp();
@@ -39,16 +35,15 @@ namespace LinAlg
 
             // Eliminem les contribucions de la columna k a cada fila inferior i guardem el multiplicador.
             for (std::size_t i = k + 1; i < n; ++i) {
-                double* row_i = data + i * ld;
-                double m_ik = row_i[k] / pivot;
+                double m_ik = A.At(i, k) / pivot;
                 if (op) op->IncDiv();
 
                 // Desem el factor d'eliminació a la part inferior de la matriu per reusar-lo a la substitució.
-                row_i[k] = m_ik;
+                A.At(i, k) = m_ik;
 
                 // Actualitzem totes les entrades a la dreta del pivot a la fila i.
-                for (std::size_t j = k + 1; j < ld; ++j) {
-                    row_i[j] -= m_ik * row_k[j];
+                for (std::size_t j = k + 1; j < n; ++j) {
+                    A.At(i, j) -= m_ik * A.At(k, j);
                     if (op) {
                         op->IncMul();
                         op->IncSub();
@@ -77,21 +72,17 @@ namespace LinAlg
             return;
         }
 
-        const double* data = U.a.data();
-        std::size_t ld = U.cols;
-
         // Última fila
-        c[n - 1] /= data[(n - 1) * ld + (n - 1)];
+        c[n - 1] /= U.At(n - 1, n - 1);
         if (op) op->IncDiv();
 
         // Iterem de la penúltima fila fins a la primera
         for (int i = int(n) - 2; i >= 0; --i) {
             const std::size_t row = static_cast<std::size_t>(i);
-            const double* row_data = data + row * ld;
 
             // Restem la contribució de les variables ja resoltes
             for (std::size_t j = row + 1; j < n; ++j) {
-                c[row] -= row_data[j] * c[j];
+                c[row] -= U.At(row, j) * c[j];
                 if (op) {
                     op->IncMul();
                     op->IncSub();
@@ -99,7 +90,7 @@ namespace LinAlg
             }
 
             // Dividim pel valor diagonal
-            c[row] /= row_data[row];
+            c[row] /= U.At(row, row);
             if (op) op->IncDiv();
         }
     }
