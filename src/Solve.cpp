@@ -175,7 +175,11 @@ namespace LinAlg
             if (pivot_row != k) {
                 A.SwapRows(k, pivot_row);
                 std::swap(b[k], b[pivot_row]);
-                if (op) op->IncSwp();
+                // Comptem 2 swaps: un per A, un per b
+                if (op) {
+                    op->IncSwp();
+                    op->IncSwp();
+                }
             }
 
             double* row_k = data + k * ld;
