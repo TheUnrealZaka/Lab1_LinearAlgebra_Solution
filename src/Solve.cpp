@@ -279,7 +279,7 @@ SolveReport SolveNoPivot(Matrix A, Vec b, double tol)
  * @param op: Comptador d'operacions (opcional)
  * @return: true si l'eliminació té èxit, false si la matriu és singular
  */
-bool GaussianEliminationPivot(Matrix& A, Vec& b, double tol, OpsCounter* op) 
+bool GaussianEliminationPivot(Matrix& A, Vec& b, double tol, OpsCounter* op, int& swap_count) 
 {
     std::size_t n = A.rows;
     
@@ -335,6 +335,7 @@ bool GaussianEliminationPivot(Matrix& A, Vec& b, double tol, OpsCounter* op)
             if (op) {
                 op->IncSwp();  // Swap de la fila d'A
                 op->IncSwp();  // Swap de l'element de b
+                swap_count += 2; // Per l'exerici de repàs abans d'examen
             }
         }
 
@@ -391,6 +392,47 @@ bool GaussianEliminationPivot(Matrix& A, Vec& b, double tol, OpsCounter* op)
     return true;  // ÈXIT: la matriu és ara triangular superior
 }
 
+
+// ============================================================================
+// FUNCIÓ: Determinant (Exercicis de repàs abans d'examen)
+// ============================================================================
+/**
+ * Calcula el determinant d'una matriu quadrada mitjançant eliminació gaussiana.
+ * 
+ * El determinant es pot obtenir a partir de la matriu triangular superior U
+ * resultant de l'eliminació gaussiana:
+ *     det(A) = det(U) = Π U[i,i]  (producte dels elements diagonals)
+ * 
+ * Si s'han fet intercanvis de files durant el pivotatge, cal tenir en compte
+ * que cada intercanvi canvia el signe del determinant:
+ *     det(A) = (-1)^s * Π U[i,i], on s = nombre d'intercanvis de files
+ * 
+ * @param A: Matriu quadrada (es passa per còpia perquè es modifica)
+ * @param tol: Tolerància per considerar la matriu singular
+ * @return: Valor del determinant (0 si la matriu és singular)
+ */
+
+double LinAlg::Determinant(Matrix A, double tol) {
+    
+    // Preparar variables
+    int num_swaps = 0;
+    Vec b(A.rows); // Vector auxiliar perquè la funció ho necessita
+
+    // Realitzar eliminació gaussiana
+    // Assumim que hem modificat el codi per agafar el num_swaps com a referència
+    bool success = GaussianEliminationPivot(A, b, tol, nullptr, num_swaps);
+
+    // Calcular el resultat
+    if (success) {
+        double det = (num_swaps % 2 == 0) ? 1.0 : -1.0; // Signe segons el nombre de swaps
+        for (std::size_t i = 0; i < A.rows; ++i) {
+            det *= A.At(i, i); // Producte dels elements diagonals
+        }
+        return det;
+    } else {
+        return 0.0; // Matriu singular
+    }
+}
 
 // ============================================================================
 // FUNCIÓ: SolvePartialPivot (EXERCICI 3)
