@@ -77,23 +77,19 @@ namespace LinAlg
             return;
         }
 
-        // Resolem el sistema triangular superior Ux = c mitjançant substitució enrere.
         const double* data = U.a.data();
         std::size_t ld = U.cols;
 
-        double diag_last = data[(n - 1) * ld + (n - 1)];
-        if (diag_last == 0.0) {
-            throw std::runtime_error("BackSubstitution: element diagonal nul");
-        }
-        c[n - 1] /= diag_last;
+        // Última fila
+        c[n - 1] /= data[(n - 1) * ld + (n - 1)];
         if (op) op->IncDiv();
 
-        // Iterem de la penúltima fila fins a la primera.
+        // Iterem de la penúltima fila fins a la primera
         for (int i = int(n) - 2; i >= 0; --i) {
             const std::size_t row = static_cast<std::size_t>(i);
             const double* row_data = data + row * ld;
 
-            // Restem la contribució de les variables ja resoltes.
+            // Restem la contribució de les variables ja resoltes
             for (std::size_t j = row + 1; j < n; ++j) {
                 c[row] -= row_data[j] * c[j];
                 if (op) {
@@ -102,12 +98,8 @@ namespace LinAlg
                 }
             }
 
-            // Dividim pel valor diagonal per obtenir la component corresponent.
-            double diag = row_data[row];
-            if (diag == 0.0) {
-                throw std::runtime_error("BackSubstitution: element diagonal nul");
-            }
-            c[row] /= diag;
+            // Dividim pel valor diagonal
+            c[row] /= row_data[row];
             if (op) op->IncDiv();
         }
     }
