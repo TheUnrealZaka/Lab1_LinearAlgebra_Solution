@@ -185,6 +185,90 @@ void BackSubstitution(const Matrix& U, Vec& c, OpsCounter* op)
 }
 
 // ============================================================================
+// FUNCIÓ: ForwardSubstitution (Exercici de repàs abans d'examen)
+// ============================================================================
+/**
+ * Resol un sistema triangular inferior Lx = b mitjançant substitució endavant.
+ * 
+ * Un cop tenim el sistema triangular inferior:
+ *     [1    0    0 ] [x₁]   [b₁]
+ *     [l₂₁  1    0 ] [x₂] = [b₂]
+ *     [l₃₁  l₃₂  1 ] [x₃]   [b₃]
+ * 
+ * Algoritme (de dalt a baix):
+ *     1. x[0] = b[0]  (primera equació)
+ *     2. x[i] = b[i] - Σ(L[i,j] * x[j])  (per i = 1, ..., n-1)
+ * 
+ * Exemple amb n=3:
+ *     x₁ = b₁
+ *     x₂ = b₂ - l₂₁·x₁
+ *     x₃ = b₃ - l₃₁·x₁ - l₃₂·x₂
+ * 
+ * Complexitat temporal: O(n²)
+ * Nombre d'operacions: ≈ n²/2 multiplicacions + n²/2 restes
+ * 
+ * @param L: Matriu triangular inferior amb diagonals iguals a 1 (NO es modifica)
+ * @param b: Vector de termes independents (ES MODIFICA: esdevé la solució x)
+ * 
+ * NOTA: Aquesta funció s'inclou com a exercici de repàs abans de l'examen.
+ */
+void ForwardSubstitution(const Matrix& L, Vec& b) {
+    std::size_t n = L.rows;
+    if (n == 0) return;
+
+    // Bucle principal que recorre les files de dalt a baix
+    for (std::size_t i = 0; i < n; ++i) {
+        // Bucle interior per restar els termes ja coneguts
+        for (std::size_t j = 0; j < i; ++j) {
+            b[i] -= L.At(i, j) * b[j];
+        }
+        // No cal dividir perquè la diagonal de L són uns.
+    }
+}
+
+// ============================================================================
+// FUNCIÓ: SolveFromLU (Exercici de repàs abans d'examen)
+// ============================================================================
+/**
+ * Resol el sistema lineal Ax = b donada la factorizació LU de A.
+ * 
+ * Aquest mètode és útil quan ja tenim la factorizació LU d'una matriu A
+ * i volem resoldre Ax = b de manera eficient.
+ * 
+ * Algorisme:
+ *     1. Resolem L·y = b mitjançant substitució endavant
+ *     2. Resolem U·x = y mitjançant substitució enrere
+ * 
+ * Complexitat temporal: O(n²) (més eficient que fer eliminació gaussiana des de zero)
+ * 
+ * @param L: Matriu triangular inferior amb diagonals iguals a 1 (NO es modifica)
+ * @param U: Matriu triangular superior (NO es modifica)
+ * @param b: Vector de termes independents (ES MODIFICA: esdevé la solució x)
+ * @param x: Vector on es guarda la solució (es redimensiona automàticament)
+ * @param op: Comptador d'operacions (opcional)
+ * 
+ * NOTA: Aquesta funció s'inclou com a exercici de repàs abans de l'examen.
+ */
+void SolveFromLU(const Matrix& L, const Matrix& U, const Vec& b, Vec& x, OpsCounter* op) {
+    std::size_t n = L.rows;
+    if (L.cols != n || U.rows != n || U.cols != n || b.size() != n) {
+        throw std::invalid_argument("SolveFromLU: dimensions incompatibles");
+    }
+    if (n == 0) {
+        x.clear();
+        return;
+    }
+
+    // Primer resolem L*y = b amb substitució endavant
+    Vec y = b;  // Fem una còpia de b perquè es modificarà
+    ForwardSubstitution(L, y);
+
+    // Després resolem U*x = y amb substitució enrere
+    x = y;  // Fem una còpia de y perquè es modificarà
+    BackSubstitution(U, x, op);
+}
+
+// ============================================================================
 // FUNCIÓ: SolveNoPivot (EXERCICI 2)
 // ============================================================================
 /**
@@ -225,7 +309,7 @@ SolveReport SolveNoPivot(Matrix A, Vec b, double tol)
 
     // FASE 1: Eliminació Gaussiana (transforma Ax = b en Ux = c)
     bool ge_success = GaussianElimination(A, b, tol, &report.ops);
-    
+
     if (!ge_success) {
         // Si falla, indiquem que s'ha trobat un pivot ≈ 0
         report.pivot_zero = true;
@@ -335,8 +419,8 @@ bool GaussianEliminationPivot(Matrix& A, Vec& b, double tol, OpsCounter* op, int
             if (op) {
                 op->IncSwp();  // Swap de la fila d'A
                 op->IncSwp();  // Swap de l'element de b
-                swap_count += 2; // Per l'exerici de repàs abans d'examen
             }
+            swap_count++; // Per l'exerici de repàs abans d'examen
         }
 
         // ====================================================================
@@ -481,7 +565,8 @@ SolveReport SolvePartialPivot(Matrix A, Vec b, double tol)
     timer.Tic();
 
     // FASE 1: Eliminació Gaussiana amb pivotatge parcial
-    bool ge_success = GaussianEliminationPivot(A, b, tol, &report.ops);
+    int swap_count = 0;
+    bool ge_success = GaussianEliminationPivot(A, b, tol, &report.ops, swap_count);
     
     if (!ge_success) {
         // Si falla, la matriu és singular (determinant ≈ 0)
