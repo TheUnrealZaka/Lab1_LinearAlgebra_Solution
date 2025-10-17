@@ -83,3 +83,39 @@ Matrix Matrix::Multiply(const Matrix& B, OpsCounter* op) const
 
     return C;
 }
+
+// Funció auxiliar per calcular el cost de multiplicar matrius de dimensions (m x n) i (n x p)
+static std::size_t MulCost(std::size_t m, std::size_t n, std::size_t p)
+{
+    return m * n * p;
+}
+
+// Multiplicació de tres matrius amb optimització de l'ordre d'operacions
+Matrix Multiply3(const Matrix& A, const Matrix& B, const Matrix& C, OpsCounter* op)
+{
+    // Validació de dimensions
+    if (A.cols != B.rows) {
+        throw std::invalid_argument("A*B*C: dimensions incompatibles");
+    }
+    if (B.cols != C.rows) {
+        throw std::invalid_argument("A*B*C: dimensions incompatibles");
+    }
+    
+    std::size_t m = A.rows; // nombre de files de A
+    std::size_t n = A.cols; // nombre de columnes de A i files de B
+    std::size_t p = B.cols; // nombre de columnes de B i files de C
+    std::size_t q = C.cols; // nombre de columnes de C
+
+    std::size_t cost_ab_c = MulCost(m, n, p) + MulCost(m, p, q); // Cost d'(A*B)*C
+    
+    std::size_t cost_a_bc = MulCost(n, p, q) + MulCost(m, n, q); // Cost d'A*(B*C)
+
+    // Triem l'ordre amb menor cost computacional
+    if (cost_ab_c <= cost_a_bc) {
+        Matrix AB = A.Multiply(B, op);
+        return AB.Multiply(C, op);
+    } else {
+        Matrix BC = B.Multiply(C, op);
+        return A.Multiply(BC, op);
+    }
+}
